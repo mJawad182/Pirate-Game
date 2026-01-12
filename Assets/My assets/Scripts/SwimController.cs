@@ -47,6 +47,13 @@ public class SwimController : MonoBehaviour
     [Tooltip("Flip rotation 180 degrees (if character model faces backwards)")]
     public bool flipRotation = false;
     
+    [Header("Enviro Compatibility")]
+    [Tooltip("Lock rotation to horizontal plane only (prevents Enviro from tilting the swimmer)")]
+    public bool lockHorizontalRotation = true;
+    
+    [Tooltip("Use initial forward direction instead of current transform.forward (prevents weather changes from affecting direction)")]
+    public bool useInitialForwardDirection = true;
+    
     public enum MovementMode
     {
         Forward,
@@ -56,6 +63,7 @@ public class SwimController : MonoBehaviour
     private Rigidbody rb;
     private int currentWaypointIndex = 0;
     private Vector3 targetDirection;
+    private Vector3 initialForwardDirection; // Store initial forward direction to prevent Enviro from changing it
     
     void Start()
     {
@@ -71,6 +79,18 @@ public class SwimController : MonoBehaviour
         // Configure Rigidbody for water physics compatibility
         rb.sleepThreshold = 0.0001f; // VERY LOW threshold to prevent sleep (critical for wake)
         rb.interpolation = RigidbodyInterpolation.Interpolate; // Smooth movement
+        
+        // Store initial forward direction (horizontal only) to prevent Enviro weather changes from affecting it
+        Vector3 forward = transform.forward;
+        forward.y = 0;
+        if (forward.magnitude > 0.01f)
+        {
+            initialForwardDirection = forward.normalized;
+        }
+        else
+        {
+            initialForwardDirection = Vector3.forward; // Fallback
+        }
     }
     
     void Update()
@@ -82,11 +102,34 @@ public class SwimController : MonoBehaviour
         }
         else
         {
-            // Move forward in local space (along the transform's forward direction)
-            targetDirection = transform.forward;
+            // Move forward - use initial direction if enabled (prevents Enviro weather changes from affecting direction)
+            if (useInitialForwardDirection)
+            {
+                targetDirection = initialForwardDirection;
+            }
+            else
+            {
+                // Move forward in local space (along the transform's forward direction)
+                // Extract only horizontal component to prevent diagonal movement
+                Vector3 forward = transform.forward;
+                forward.y = 0; // Remove vertical component
+                if (forward.magnitude > 0.01f)
+                {
+                    targetDirection = forward.normalized;
+                }
+                else
+                {
+                    // Fallback if forward is pointing straight up/down
+                    targetDirection = Vector3.forward;
+                }
+            }
         }
-        
+    }
+    
+    void LateUpdate()
+    {
         // Rotate character to face movement direction (for forward mode)
+        // Use LateUpdate to avoid conflicts with Enviro's LateUpdate
         if (rotateToMovementDirection && movementMode == MovementMode.Forward && rb != null)
         {
             UpdateRotation();
@@ -111,7 +154,17 @@ public class SwimController : MonoBehaviour
             }
             
             // Rotate to face movement direction
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            Quaternion targetRotation = Quaternion.LookRotation(direction, Vector3.up);
+            
+            // Lock rotation to horizontal plane if enabled (prevents Enviro interference)
+            if (lockHorizontalRotation)
+            {
+                Vector3 euler = targetRotation.eulerAngles;
+                euler.x = 0; // Lock pitch
+                euler.z = 0; // Lock roll
+                targetRotation = Quaternion.Euler(euler);
+            }
+            
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
     }
@@ -120,7 +173,10 @@ public class SwimController : MonoBehaviour
     {
         if (pathToFollow == null || pathToFollow.WaypointCount == 0)
         {
-            targetDirection = transform.forward; // Fallback to forward
+            // Fallback to forward - extract horizontal component
+            Vector3 forward = transform.forward;
+            forward.y = 0;
+            targetDirection = forward.normalized;
             return;
         }
         
@@ -184,7 +240,17 @@ public class SwimController : MonoBehaviour
                 direction = -direction;
             }
             
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            Quaternion targetRotation = Quaternion.LookRotation(direction, Vector3.up);
+            
+            // Lock rotation to horizontal plane if enabled (prevents Enviro interference)
+            if (lockHorizontalRotation)
+            {
+                Vector3 euler = targetRotation.eulerAngles;
+                euler.x = 0; // Lock pitch
+                euler.z = 0; // Lock roll
+                targetRotation = Quaternion.Euler(euler);
+            }
+            
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
     }

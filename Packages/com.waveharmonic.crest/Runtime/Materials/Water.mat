@@ -41,6 +41,7 @@ Material:
   m_Parent: {fileID: -876546973899608171, guid: 00ffe7d0b7161420897069dc6e12822c, type: 3}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
+  - CREST_FLOW_ON
   - _ALPHATEST_ON
   - _BUILTIN_ALPHATEST_ON
   - _BUILTIN_AlphaClip
@@ -69,6 +70,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - CREST_FLOW: 1
     - _AlphaDstBlend: 10
     - _BUILTIN_DstBlend: 10
     - _BUILTIN_QueueControl: 0
