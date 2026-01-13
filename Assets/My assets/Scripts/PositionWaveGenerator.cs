@@ -35,7 +35,7 @@ public class PositionWaveGenerator : MonoBehaviour
     
     [Header("Debug")]
     [Tooltip("Show debug gizmos in scene view")]
-    public bool showDebugGizmos = true;
+    public bool showDebugGizmos = false;
     
     private GameObject waveObject;
     private SphereWaterInteraction waveInteraction;

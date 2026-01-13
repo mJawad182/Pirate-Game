@@ -28,6 +28,12 @@ public class SimpleSwimController : MonoBehaviour
     [Tooltip("Rotate character to face movement direction")]
     public bool rotateToMovementDirection = true;
     
+    [Tooltip("Lock rotation completely - prevents any rotation (swimmer will maintain fixed direction)")]
+    public bool lockRotation = false;
+    
+    [Tooltip("Fixed rotation direction when lockRotation is enabled (world space)")]
+    public Vector3 fixedRotationDirection = Vector3.forward;
+    
     [Tooltip("Rotation speed (higher = faster rotation)")]
     [Range(0.5f, 10f)]
     public float rotationSpeed = 2f;
@@ -55,6 +61,13 @@ public class SimpleSwimController : MonoBehaviour
     
     void Update()
     {
+        // Lock rotation if enabled - force fixed direction every frame
+        if (lockRotation)
+        {
+            LockRotation();
+            return;
+        }
+        
         // Rotate character to face movement direction
         if (rotateToMovementDirection && rb != null)
         {
@@ -62,26 +75,44 @@ public class SimpleSwimController : MonoBehaviour
         }
     }
     
+    void LockRotation()
+    {
+        // Force rotation to fixed direction every frame to prevent any rotation
+        Vector3 direction = fixedRotationDirection.normalized;
+        direction.y = 0; // Horizontal only
+        
+        if (direction.magnitude > 0.01f)
+        {
+            Quaternion fixedRotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+            
+            // Set rotation directly (no interpolation) to prevent any rotation
+            transform.rotation = fixedRotation;
+        }
+    }
+    
     void UpdateRotation()
     {
-        // Get velocity direction (horizontal only)
-        Vector3 velocity = rb.linearVelocity;
-        velocity.y = 0;
-        
-        // Only rotate if moving
-        if (velocity.magnitude > 0.1f)
+        // Use transform.forward (where we're trying to move) instead of velocity
+        // This ensures we face the movement direction, not where physics is currently moving us
+        if (autoMoveForward)
         {
-            Vector3 direction = velocity.normalized;
+            Vector3 direction = transform.forward;
+            direction.y = 0; // Horizontal only
             
-            // Flip direction if needed
-            if (flipRotation)
+            if (direction.magnitude > 0.1f)
             {
-                direction = -direction;
+                direction = direction.normalized;
+                
+                // Flip direction if needed (for models that face backwards)
+                if (flipRotation)
+                {
+                    direction = -direction;
+                }
+                
+                // Rotate to face movement direction
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
             }
-            
-            // Rotate to face movement direction
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
     }
     

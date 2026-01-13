@@ -14,7 +14,7 @@ public class WeatherProgressionController : MonoBehaviour
 {
     [Header("Weather Progression Settings")]
     [Tooltip("Total duration for all weather transitions (20-25 seconds recommended)")]
-    [Range(20f, 30f)]
+    [Range(20f, 300f)]
     public float totalTransitionDuration = 22.5f;
 
     [Tooltip("Weather type names in Enviro (must match exactly)")]
@@ -79,13 +79,21 @@ public class WeatherProgressionController : MonoBehaviour
     [Tooltip("Smooth transition speed for wave intensity changes")]
     [Range(0.1f, 5f)]
     public float waveIntensityTransitionSpeed = 1f;
+    
+    [Tooltip("Wave regeneration interval (seconds) - lower = smoother but more performance cost")]
+    [Range(0.1f, 2f)]
+    public float waveRegenerationInterval = 0.5f;
 
     [Header("Debug")]
     [Tooltip("Start weather progression automatically on Start()")]
     public bool startOnStart = true;
 
+    [Tooltip("Delay before starting weather progression (seconds)")]
+    [Range(0f, 60f)]
+    public float startDelay = 20f;
+
     [Tooltip("Show debug messages")]
-    public bool showDebug = true;
+    public bool showDebug = false;
 
     // Private variables
     private EnviroManager enviroManager;
@@ -101,6 +109,8 @@ public class WeatherProgressionController : MonoBehaviour
     private float targetWaveMultiplier = 0f;
     private WaterRenderer waterRenderer;
     private float originalWindSpeed = 20f; // Default wind speed
+    private float lastRegenerationTime = 0f;
+    private float lastMultiplierValue = 0f;
 
     void Start()
     {
@@ -193,10 +203,17 @@ public class WeatherProgressionController : MonoBehaviour
         targetWaveMultiplier = startingWaveMultiplier;
         UpdateWaveMultiplier(startingWaveMultiplier);
 
-        // Start progression if enabled
+        // Start progression if enabled (with optional delay)
         if (startOnStart)
         {
-            StartWeatherProgression();
+            if (startDelay > 0f)
+            {
+                StartCoroutine(DelayedStartWeatherProgression());
+            }
+            else
+            {
+                StartWeatherProgression();
+            }
         }
     }
 
@@ -217,6 +234,7 @@ public class WeatherProgressionController : MonoBehaviour
 
         // Get Wave Spectra from Shape Gerstner components
         System.Collections.Generic.List<WaveSpectrum> spectraList = new System.Collections.Generic.List<WaveSpectrum>();
+        
         foreach (var shapeGerstner in shapeGerstnerComponents)
         {
             // Use reflection to access the internal _Spectrum field
@@ -236,6 +254,7 @@ public class WeatherProgressionController : MonoBehaviour
         {
             waveSpectra[i] = spectraList[i];
         }
+        
         if (showDebug) Debug.Log($"WeatherProgressionController: Found {waveSpectra.Length} unique Wave Spectrum asset(s)");
     }
 
@@ -272,11 +291,8 @@ public class WeatherProgressionController : MonoBehaviour
             }
         }
 
-        // Force Shape Gerstner to regenerate waves by resetting _WindSpeedWhenGenerated
-        // This tricks it into thinking wind speed changed, forcing UpdateWaveData to run
+        // Force Shape Gerstner to regenerate waves
         ForceWaveRegeneration();
-
-        if (showDebug) Debug.Log($"WeatherProgressionController: Updated wave multiplier to {multiplier:F2} and forced regeneration");
     }
 
     /// <summary>
@@ -311,6 +327,7 @@ public class WeatherProgressionController : MonoBehaviour
 
     /// <summary>
     /// Temporarily changes wind speed to force wave regeneration
+    /// Uses smaller change and waits longer to prevent visual glitches
     /// </summary>
     private IEnumerator TemporaryWindSpeedChange()
     {
@@ -338,10 +355,11 @@ public class WeatherProgressionController : MonoBehaviour
                 overrideField.SetValue(waterRenderer, true);
             }
 
-            // Change wind speed slightly (0.1 km/h difference is enough to trigger regeneration)
-            windSpeedField.SetValue(waterRenderer, currentWindSpeed + 0.1f);
+            // Use smaller change (0.05 km/h) to minimize visual glitches
+            windSpeedField.SetValue(waterRenderer, currentWindSpeed + 0.05f);
             
-            // Wait one frame for regeneration
+            // Wait 2 frames for smoother regeneration (reduces glitches)
+            yield return null;
             yield return null;
             
             // Restore original wind speed
@@ -366,31 +384,39 @@ public class WeatherProgressionController : MonoBehaviour
         // Smoothly transition wave multiplier
         if (Mathf.Abs(currentWaveMultiplier - targetWaveMultiplier) > 0.01f)
         {
-            float previousMultiplier = currentWaveMultiplier;
+            // Use smooth interpolation for gradual changes
             currentWaveMultiplier = Mathf.Lerp(currentWaveMultiplier, targetWaveMultiplier, 
                 waveIntensityTransitionSpeed * Time.deltaTime);
-            
-            // Update multiplier continuously during transition (but throttle regeneration)
-            // Only force regeneration every 0.2 seconds to avoid performance issues
-            if (Time.frameCount % 12 == 0) // ~12 frames = ~0.2 seconds at 60fps
+        }
+        
+        // Update multiplier value continuously (smoothly)
+        // This ensures the multiplier value is always up-to-date without forcing regeneration
+        var multiplierField = typeof(WaveSpectrum).GetField("_Multiplier", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (multiplierField != null && waveSpectra != null)
+        {
+            foreach (var spectrum in waveSpectra)
             {
-                UpdateWaveMultiplier(currentWaveMultiplier);
-            }
-            else
-            {
-                // Still update multiplier value without forcing regeneration every frame
-                var multiplierField = typeof(WaveSpectrum).GetField("_Multiplier", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (multiplierField != null && waveSpectra != null)
+                if (spectrum != null)
                 {
-                    foreach (var spectrum in waveSpectra)
-                    {
-                        if (spectrum != null)
-                        {
-                            multiplierField.SetValue(spectrum, currentWaveMultiplier);
-                        }
-                    }
+                    multiplierField.SetValue(spectrum, currentWaveMultiplier);
                 }
             }
+        }
+        
+        // Only force regeneration at intervals to prevent glitches
+        // Check if multiplier changed significantly or enough time has passed
+        float multiplierChange = Mathf.Abs(currentWaveMultiplier - lastMultiplierValue);
+        float timeSinceLastRegen = Time.time - lastRegenerationTime;
+        
+        // Regenerate if:
+        // 1. Multiplier changed significantly (more than 0.05)
+        // 2. OR enough time has passed since last regeneration
+        if ((multiplierChange > 0.05f || timeSinceLastRegen >= waveRegenerationInterval) && 
+            Mathf.Abs(currentWaveMultiplier - lastMultiplierValue) > 0.01f)
+        {
+            UpdateWaveMultiplier(currentWaveMultiplier);
+            lastMultiplierValue = currentWaveMultiplier;
+            lastRegenerationTime = Time.time;
         }
     }
 
@@ -445,6 +471,18 @@ public class WeatherProgressionController : MonoBehaviour
         }
         
         return allFound;
+    }
+
+    /// <summary>
+    /// Coroutine to delay weather progression start
+    /// </summary>
+    private IEnumerator DelayedStartWeatherProgression()
+    {
+        if (showDebug) Debug.Log($"WeatherProgressionController: Waiting {startDelay} seconds before starting weather progression...");
+        yield return new WaitForSeconds(startDelay);
+        
+        if (showDebug) Debug.Log("WeatherProgressionController: Starting weather progression after delay");
+        StartWeatherProgression();
     }
 
     /// <summary>

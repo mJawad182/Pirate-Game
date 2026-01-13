@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Spectrum
   m_EditorClassIdentifier: 
   _Version: 0
-  _WaveDirectionVariance: 90
-  _GravityScale: 1
-  _Multiplier: 0
+  _WaveDirectionVariance: 40
+  _GravityScale: 0.2
+  _Multiplier: 4.990026
   _PowerLogarithmicScales:
-  - -7.10794
+  - -8
   - -6.42794
   - -5.93794
   - -5.27794
@@ -62,6 +62,6 @@ MonoBehaviour:
   - 1
   - 1
   - 1
-  _Chop: 1.6
+  _Chop: 0
   _ShowAdvancedControls: 0
   _Model: 0

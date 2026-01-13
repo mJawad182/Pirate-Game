@@ -28,7 +28,7 @@ public class CrestWaterInteractionFix : MonoBehaviour
     public float minVelocity = 0.01f;
     
     [Header("Debug")]
-    public bool showDebug = true;
+    public bool showDebug = false;
     
     private Rigidbody rb;
     private SphereWaterInteraction sphereInteraction;

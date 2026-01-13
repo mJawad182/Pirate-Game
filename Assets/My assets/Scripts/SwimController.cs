@@ -40,6 +40,12 @@ public class SwimController : MonoBehaviour
     [Tooltip("Rotate character to face movement direction")]
     public bool rotateToMovementDirection = true;
     
+    [Tooltip("Lock rotation completely - prevents any rotation (swimmer will maintain fixed direction)")]
+    public bool lockRotation = false;
+    
+    [Tooltip("Fixed rotation direction when lockRotation is enabled (world space)")]
+    public Vector3 fixedRotationDirection = Vector3.forward;
+    
     [Tooltip("Rotation speed (higher = faster rotation)")]
     [Range(0.5f, 10f)]
     public float rotationSpeed = 2f;
@@ -68,7 +74,10 @@ public class SwimController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        
+        rb.constraints =
+        RigidbodyConstraints.FreezeRotationX |
+        RigidbodyConstraints.FreezeRotationZ;
+
         if (rb == null)
         {
             Debug.LogError("SwimController: No Rigidbody found! Adding Rigidbody component is required.");
@@ -126,48 +135,75 @@ public class SwimController : MonoBehaviour
         }
     }
     
-    void LateUpdate()
+   void FixedUpdate()
+{
+    if (rb == null) return;
+
+    if (rb.IsSleeping())
+        rb.WakeUp();
+
+    // Movement
+    if (targetDirection.magnitude > 0.1f)
     {
-        // Rotate character to face movement direction (for forward mode)
-        // Use LateUpdate to avoid conflicts with Enviro's LateUpdate
-        if (rotateToMovementDirection && movementMode == MovementMode.Forward && rb != null)
+        if (useForceBasedMovement)
         {
-            UpdateRotation();
+            Vector3 targetVelocity = targetDirection * moveSpeed;
+            targetVelocity.y = rb.linearVelocity.y;
+
+            Vector3 velocityDifference = targetVelocity - rb.linearVelocity;
+            velocityDifference.y = 0;
+
+            rb.AddForce(
+                velocityDifference * accelerationMultiplier,
+                ForceMode.Acceleration
+            );
+        }
+        else
+        {
+            Vector3 movement =
+                targetDirection * moveSpeed * Time.fixedDeltaTime;
+
+            movement.y = 0;
+            rb.MovePosition(rb.position + movement);
         }
     }
-    
-    void UpdateRotation()
+    else
     {
-        // Get velocity direction (horizontal only)
-        Vector3 velocity = rb.linearVelocity;
-        velocity.y = 0;
-        
-        // Only rotate if moving
-        if (velocity.magnitude > 0.1f)
-        {
-            Vector3 direction = velocity.normalized;
-            
-            // Flip direction if needed
-            if (flipRotation)
-            {
-                direction = -direction;
-            }
-            
-            // Rotate to face movement direction
-            Quaternion targetRotation = Quaternion.LookRotation(direction, Vector3.up);
-            
-            // Lock rotation to horizontal plane if enabled (prevents Enviro interference)
-            if (lockHorizontalRotation)
-            {
-                Vector3 euler = targetRotation.eulerAngles;
-                euler.x = 0; // Lock pitch
-                euler.z = 0; // Lock roll
-                targetRotation = Quaternion.Euler(euler);
-            }
-            
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
-        }
+        Vector3 v = rb.linearVelocity;
+        v.x *= 0.9f;
+        v.z *= 0.9f;
+        rb.linearVelocity = v;
     }
+
+    // >>> APPLY ROTATION HERE <<<
+    ApplyRotationFixed();
+}
+
+   void ApplyRotationFixed()
+{
+    if (!rotateToMovementDirection) return;
+    if (targetDirection.sqrMagnitude < 0.01f) return;
+
+    Vector3 dir = targetDirection.normalized;
+
+    if (flipRotation)
+        dir = -dir;
+
+    // Ensure horizontal-only direction
+    dir.y = 0f;
+
+    Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
+
+    Quaternion smoothed =
+        Quaternion.Slerp(
+            rb.rotation,
+            targetRot,
+            rotationSpeed * Time.fixedDeltaTime
+        );
+
+    rb.MoveRotation(smoothed);
+}
+
     
     void UpdatePathFollowing()
     {
@@ -255,63 +291,63 @@ public class SwimController : MonoBehaviour
         }
     }
     
-    void FixedUpdate()
-    {
-        if (rb == null) return;
+    // void FixedUpdate()
+    // {
+    //     if (rb == null) return;
         
-        // Keep Rigidbody awake to maintain proper velocity tracking
-        if (rb.IsSleeping())
-        {
-            rb.WakeUp();
-        }
+    //     // Keep Rigidbody awake to maintain proper velocity tracking
+    //     if (rb.IsSleeping())
+    //     {
+    //         rb.WakeUp();
+    //     }
         
-        // Apply movement based on target direction
-        if (targetDirection.magnitude > 0.1f)
-        {
-            if (useForceBasedMovement)
-            {
-                // Use AddForce - better for water interaction as it properly updates velocity
-                // This ensures SphereWaterInteraction can track velocity correctly
-                // Target velocity in X and Z only, preserve Y for FloatingObject
-                Vector3 targetVelocity = targetDirection * moveSpeed;
-                targetVelocity.y = rb.linearVelocity.y; // Preserve Y velocity for FloatingObject
+    //     // Apply movement based on target direction
+    //     if (targetDirection.magnitude > 0.1f)
+    //     {
+    //         if (useForceBasedMovement)
+    //         {
+    //             // Use AddForce - better for water interaction as it properly updates velocity
+    //             // This ensures SphereWaterInteraction can track velocity correctly
+    //             // Target velocity in X and Z only, preserve Y for FloatingObject
+    //             Vector3 targetVelocity = targetDirection * moveSpeed;
+    //             targetVelocity.y = rb.linearVelocity.y; // Preserve Y velocity for FloatingObject
                 
-                // Calculate force needed to reach target velocity (smoothly)
-                Vector3 velocityDifference = targetVelocity - rb.linearVelocity;
-                velocityDifference.y = 0; // Don't interfere with FloatingObject vertical forces
+    //             // Calculate force needed to reach target velocity (smoothly)
+    //             Vector3 velocityDifference = targetVelocity - rb.linearVelocity;
+    //             velocityDifference.y = 0; // Don't interfere with FloatingObject vertical forces
                 
-                // Apply force smoothly (scaled by mass for proper physics)
-                // Using Acceleration mode which scales with mass automatically
-                rb.AddForce(velocityDifference * accelerationMultiplier, ForceMode.Acceleration);
-            }
-            else
-            {
-                // Use MovePosition - smoother but can interfere with velocity tracking
-                // Only move X and Z, let FloatingObject handle Y
-                Vector3 movement = targetDirection * moveSpeed * Time.fixedDeltaTime;
-                movement.y = 0; // Preserve Y for FloatingObject
-                Vector3 targetPosition = transform.position + movement;
+    //             // Apply force smoothly (scaled by mass for proper physics)
+    //             // Using Acceleration mode which scales with mass automatically
+    //             rb.AddForce(velocityDifference * accelerationMultiplier, ForceMode.Acceleration);
+    //         }
+    //         else
+    //         {
+    //             // Use MovePosition - smoother but can interfere with velocity tracking
+    //             // Only move X and Z, let FloatingObject handle Y
+    //             Vector3 movement = targetDirection * moveSpeed * Time.fixedDeltaTime;
+    //             movement.y = 0; // Preserve Y for FloatingObject
+    //             Vector3 targetPosition = transform.position + movement;
                 
-                // Preserve Y position for FloatingObject
-                targetPosition.y = transform.position.y;
+    //             // Preserve Y position for FloatingObject
+    //             targetPosition.y = transform.position.y;
                 
-                rb.MovePosition(targetPosition);
-            }
-        }
-        else
-        {
-            // Stop movement
-            if (useForceBasedMovement)
-            {
-                // Dampen horizontal velocity
-                Vector3 velocity = rb.linearVelocity;
-                velocity.x *= 0.9f;
-                velocity.z *= 0.9f;
-                velocity.y = rb.linearVelocity.y; // Preserve Y for FloatingObject
-                rb.linearVelocity = velocity;
-            }
-        }
-    }
+    //             rb.MovePosition(targetPosition);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         // Stop movement
+    //         if (useForceBasedMovement)
+    //         {
+    //             // Dampen horizontal velocity
+    //             Vector3 velocity = rb.linearVelocity;
+    //             velocity.x *= 0.9f;
+    //             velocity.z *= 0.9f;
+    //             velocity.y = rb.linearVelocity.y; // Preserve Y for FloatingObject
+    //             rb.linearVelocity = velocity;
+    //         }
+    //     }
+    // }
     
     /// <summary>
     /// Reset path following to start

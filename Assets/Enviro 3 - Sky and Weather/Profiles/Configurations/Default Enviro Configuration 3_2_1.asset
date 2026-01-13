@@ -130,9 +130,9 @@ MonoBehaviour:
   preset: {fileID: 11400000, guid: 0fcdd472bd6a8ec429fc1e9bc978c4fa, type: 2}
   showCirrusCloudsControls: 0
   show2DCloudsControls: 0
-  cloudFlatBaseAnim: {x: -0.73573935, y: 0.8231458}
-  cloudFlatDetailAnim: {x: 0.14107253, y: 0.4199923}
-  cirrusAnim: {x: -0.5131334, y: 0.55180407}
+  cloudFlatBaseAnim: {x: 0.74785465, y: -0.66082984}
+  cloudFlatDetailAnim: {x: -0.4484704, y: -0.996296}
+  cirrusAnim: {x: 0.2288413, y: -0.19017962}
 --- !u!114 &-5447272849285213076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1187,7 +1187,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7aa6806f1fff5b489f26777d053c723, type: 3}
   m_Name: Effects Module
   m_EditorClassIdentifier: 
-  showModuleInspector: 0
+  showModuleInspector: 1
   showSaveLoad: 1
   active: 1
   Settings:
@@ -1199,7 +1199,7 @@ MonoBehaviour:
       localPositionOffset: {x: 0, y: 25, z: 0}
       localRotationOffset: {x: -90, y: 0, z: 0}
       emissionRate: 0
-      maxEmission: 2000
+      maxEmission: 80000
     - mySystem: {fileID: 0}
       name: Snow
       prefab: {fileID: 1000011163096958, guid: 6ec12b7d8fc5e704fbbbe1641e4a6c56, type: 3}
@@ -2256,7 +2256,7 @@ MonoBehaviour:
   showDensityControls: 0
   showTextureControls: 0
   showWindControls: 0
-  cloudAnimLayer1: {x: 0.2818113, y: 0.92525196, z: -0.42468464}
+  cloudAnimLayer1: {x: 0.5072225, y: 0.69984096, z: -0.3570037}
   cloudAnimLayer2: {x: -0.4792946, y: 0.4792946, z: 0.105380446}
   cloudAnimNonScaledLayer1: {x: 0.006009331, y: -0.006009331, z: -0.1001555}
   cloudAnimNonScaledLayer2: {x: -0.00200311, y: 0.00200311, z: -0.1001555}
@@ -2352,7 +2352,7 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 96eebec6fa78a3c48ba2bc98ac5ab57f, type: 2}
     - {fileID: 11400000, guid: 11fdd63974de7ae44b1c689d499953f6, type: 2}
     - {fileID: 11400000, guid: ebf8ae7a51a5cd342a90c81f5182d8a8, type: 2}
-    cloudsTransitionSpeed: 1
+    cloudsTransitionSpeed: 0.1
     fogTransitionSpeed: 1
     lightingTransitionSpeed: 1
     skyTransitionSpeed: 1
