@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _Version: 0
   _WaveDirectionVariance: 40
-  _GravityScale: 0.2
-  _Multiplier: 4.990026
+  _GravityScale: 0.3
+  _Multiplier: 4.9754333
   _PowerLogarithmicScales:
   - -8
   - -6.42794
@@ -62,6 +62,6 @@ MonoBehaviour:
   - 1
   - 1
   - 1
-  _Chop: 0
+  _Chop: 0.6
   _ShowAdvancedControls: 0
   _Model: 0
