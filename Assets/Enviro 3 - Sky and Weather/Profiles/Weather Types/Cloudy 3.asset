@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   showEditor: 0
   showEffectControls: 0
-  showCloudControls: 0
+  showCloudControls: 1
   showFlatCloudControls: 0
-  showFogControls: 0
+  showFogControls: 1
   showSkyControls: 0
   showLightingControls: 0
   showAuroraControls: 1
@@ -75,10 +75,9 @@ MonoBehaviour:
   lightingOverride:
     directLightIntensityModifier: 1
     ambientIntensityModifier: 1
-    shadowIntensity: 1
   skyOverride:
     intensity: 1
-    skyColorTint: {r: 0.6679245, g: 0.6679245, b: 0.6679245, a: 1}
+    skyColorTint: {r: 1, g: 1, b: 1, a: 1}
   fogOverride:
     fogDensity: 0.027
     fogHeightFalloff: 0.0008

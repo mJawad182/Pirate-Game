@@ -85,12 +85,8 @@ public class WeatherProgressionController : MonoBehaviour
     public float waveRegenerationInterval = 0.5f;
 
     [Header("Debug")]
-    [Tooltip("Start weather progression automatically on Start()")]
-    public bool startOnStart = true;
-
-    [Tooltip("Delay before starting weather progression (seconds)")]
-    [Range(0f, 60f)]
-    public float startDelay = 20f;
+    [Tooltip("Start weather progression when parrot is destroyed")]
+    public bool startOnParrotDestroyed = true;
 
     [Tooltip("Show debug messages")]
     public bool showDebug = false;
@@ -203,18 +199,36 @@ public class WeatherProgressionController : MonoBehaviour
         targetWaveMultiplier = startingWaveMultiplier;
         UpdateWaveMultiplier(startingWaveMultiplier);
 
-        // Start progression if enabled (with optional delay)
-        if (startOnStart)
+        // Subscribe to parrot destruction event if enabled
+        if (startOnParrotDestroyed)
         {
-            if (startDelay > 0f)
-            {
-                StartCoroutine(DelayedStartWeatherProgression());
-            }
-            else
-            {
-                StartWeatherProgression();
-            }
+            ParrotController.OnParrotDestroyed += OnParrotDestroyed;
+            if (showDebug) Debug.Log("WeatherProgressionController: Subscribed to parrot destruction event - will start when parrot is destroyed");
         }
+    }
+    
+    void OnDestroy()
+    {
+        // Unsubscribe from event
+        if (startOnParrotDestroyed)
+        {
+            ParrotController.OnParrotDestroyed -= OnParrotDestroyed;
+        }
+    }
+    
+    /// <summary>
+    /// Called when parrot is destroyed - starts weather progression immediately
+    /// </summary>
+    private void OnParrotDestroyed()
+    {
+        if (isProgressionActive)
+        {
+            if (showDebug) Debug.LogWarning("WeatherProgressionController: Weather progression already active, ignoring parrot destruction event");
+            return;
+        }
+        
+        if (showDebug) Debug.Log("WeatherProgressionController: Parrot destroyed! Starting weather progression immediately...");
+        StartWeatherProgression();
     }
 
     /// <summary>
@@ -476,14 +490,6 @@ public class WeatherProgressionController : MonoBehaviour
     /// <summary>
     /// Coroutine to delay weather progression start
     /// </summary>
-    private IEnumerator DelayedStartWeatherProgression()
-    {
-        if (showDebug) Debug.Log($"WeatherProgressionController: Waiting {startDelay} seconds before starting weather progression...");
-        yield return new WaitForSeconds(startDelay);
-        
-        if (showDebug) Debug.Log("WeatherProgressionController: Starting weather progression after delay");
-        StartWeatherProgression();
-    }
 
     /// <summary>
     /// Starts the weather progression sequence

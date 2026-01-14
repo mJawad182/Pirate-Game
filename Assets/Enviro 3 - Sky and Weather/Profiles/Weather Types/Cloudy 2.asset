@@ -15,10 +15,10 @@ MonoBehaviour:
   showEditor: 0
   showEffectControls: 0
   showCloudControls: 1
-  showFlatCloudControls: 0
-  showFogControls: 0
-  showSkyControls: 1
-  showLightingControls: 0
+  showFlatCloudControls: 1
+  showFogControls: 1
+  showSkyControls: 0
+  showLightingControls: 1
   showAuroraControls: 0
   showEnvironmentControls: 0
   showAudioControls: 0
@@ -27,7 +27,7 @@ MonoBehaviour:
   showLightningControls: 0
   cloudsOverride:
     ambientLightIntensity: 1
-    showLayer1: 0
+    showLayer1: 1
     coverageLayer1: -0.073
     dilateCoverageLayer1: 0.423
     dilateTypeLayer1: 1
@@ -78,9 +78,9 @@ MonoBehaviour:
     shadowIntensity: 0.996
   skyOverride:
     intensity: 1
-    skyColorTint: {r: 0.8490566, g: 0.8490566, b: 0.8490566, a: 1}
+    skyColorTint: {r: 1, g: 1, b: 1, a: 1}
   fogOverride:
-    fogDensity: 0
+    fogDensity: 0.059
     fogHeightFalloff: 0.0045
     fogHeight: 0
     fogDensity2: 0.053

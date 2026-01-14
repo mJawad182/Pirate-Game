@@ -130,9 +130,9 @@ MonoBehaviour:
   preset: {fileID: 11400000, guid: 0fcdd472bd6a8ec429fc1e9bc978c4fa, type: 2}
   showCirrusCloudsControls: 0
   show2DCloudsControls: 0
-  cloudFlatBaseAnim: {x: 0.74785465, y: -0.66082984}
-  cloudFlatDetailAnim: {x: -0.4484704, y: -0.996296}
-  cirrusAnim: {x: 0.2288413, y: -0.19017962}
+  cloudFlatBaseAnim: {x: -0.03964664, y: 0.12673847}
+  cloudFlatDetailAnim: {x: -0.36846828, y: 0.9335168}
+  cirrusAnim: {x: -0.16530901, y: 0.20378113}
 --- !u!114 &-5447272849285213076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1191,16 +1191,26 @@ MonoBehaviour:
   showSaveLoad: 1
   active: 1
   Settings:
-    enviroEffectSystemType: 1
+    enviroEffectSystemType: 0
     effectTypes:
-    - mySystem: {fileID: 0}
+    - myVFXGraph: {fileID: 0}
+      prefabVFXGraph: {fileID: 0}
+      localPositionOffsetVFXGraph: {x: 0, y: 0, z: 0}
+      localRotationOffsetVFXGraph: {x: 0, y: 0, z: 0}
+      maxEmissionVFXGraph: 0
+      mySystem: {fileID: 0}
       name: Rain
       prefab: {fileID: 6936246916098640434, guid: bf3881f9fe64de14597de578d2acee5d, type: 3}
       localPositionOffset: {x: 0, y: 25, z: 0}
       localRotationOffset: {x: -90, y: 0, z: 0}
       emissionRate: 0
-      maxEmission: 80000
-    - mySystem: {fileID: 0}
+      maxEmission: 2000
+    - myVFXGraph: {fileID: 0}
+      prefabVFXGraph: {fileID: 0}
+      localPositionOffsetVFXGraph: {x: 0, y: 0, z: 0}
+      localRotationOffsetVFXGraph: {x: 0, y: 0, z: 0}
+      maxEmissionVFXGraph: 0
+      mySystem: {fileID: 0}
       name: Snow
       prefab: {fileID: 1000011163096958, guid: 6ec12b7d8fc5e704fbbbe1641e4a6c56, type: 3}
       localPositionOffset: {x: 0, y: 25, z: 0}
@@ -2005,7 +2015,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 456bf221b186fde4096dcf2c1841b35a, type: 3}
   m_Name: Quality Module
   m_EditorClassIdentifier: 
-  showModuleInspector: 0
+  showModuleInspector: 1
   showSaveLoad: 0
   active: 1
   Settings:
@@ -2030,7 +2040,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 153c2e7862a6cc74c80438e6d8e45aab, type: 3}
   m_Name: Reflections Module
   m_EditorClassIdentifier: 
-  showModuleInspector: 0
+  showModuleInspector: 1
   showSaveLoad: 0
   active: 1
   Settings:
@@ -2051,7 +2061,7 @@ MonoBehaviour:
     updateDefaultEnvironmentReflections: 1
     defaultSkyReflectionTex: {fileID: 0}
   preset: {fileID: 11400000, guid: da668770e38694d49af97ecfd05fd7eb, type: 2}
-  showReflectionControls: 0
+  showReflectionControls: 1
   lastReflectionUpdate: 8.025
   lastReflectionUpdatePos: {x: 622.6, y: 164.2, z: 370.6}
 --- !u!114 &3171557369469055653
@@ -2256,7 +2266,7 @@ MonoBehaviour:
   showDensityControls: 0
   showTextureControls: 0
   showWindControls: 0
-  cloudAnimLayer1: {x: 0.5072225, y: 0.69984096, z: -0.3570037}
+  cloudAnimLayer1: {x: -0.67450595, y: -0.11866849, z: 0.5551856}
   cloudAnimLayer2: {x: -0.4792946, y: 0.4792946, z: 0.105380446}
   cloudAnimNonScaledLayer1: {x: 0.006009331, y: -0.006009331, z: -0.1001555}
   cloudAnimNonScaledLayer2: {x: -0.00200311, y: 0.00200311, z: -0.1001555}
@@ -2362,7 +2372,7 @@ MonoBehaviour:
     audioTransitionSpeed: 1
   preset: {fileID: 11400000, guid: 8c4e279017d5e44458e3e4663b6ab460, type: 2}
   targetWeatherType: {fileID: 11400000, guid: 6c589d06d1746d04a864437f71d0cc30, type: 2}
-  weatherBlendProgress: 1
+  weatherBlendProgress: 0
   globalAutoWeatherChange: 1
   triggerCollider: {fileID: 0}
   triggerRB: {fileID: 0}
@@ -2444,7 +2454,7 @@ MonoBehaviour:
     fogQualityMode: 0
     floatingPointOriginMod: {x: 0, y: 0, z: 0}
     globalFogHeight: 0
-    fogDensity: 0
+    fogDensity: 0.041
     fogHeightFalloff: 0.0121
     fogHeight: 0
     fogDensity2: 0.044

@@ -15,7 +15,7 @@ MonoBehaviour:
   _Version: 0
   _WaveDirectionVariance: 40
   _GravityScale: 0.3
-  _Multiplier: 4.9754333
+  _Multiplier: 0
   _PowerLogarithmicScales:
   - -8
   - -6.42794

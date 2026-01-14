@@ -17,7 +17,7 @@ MonoBehaviour:
   showCloudControls: 0
   showFlatCloudControls: 0
   showFogControls: 1
-  showSkyControls: 0
+  showSkyControls: 1
   showLightingControls: 0
   showAuroraControls: 0
   showEnvironmentControls: 0
@@ -80,7 +80,7 @@ MonoBehaviour:
     intensity: 1
     skyColorTint: {r: 1, g: 1, b: 1, a: 1}
   fogOverride:
-    fogDensity: 0
+    fogDensity: 0.041
     fogHeightFalloff: 0.0121
     fogHeight: 0
     fogDensity2: 0.044

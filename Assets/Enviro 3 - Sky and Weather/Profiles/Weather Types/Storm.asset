@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Storm
   m_EditorClassIdentifier: 
   showEditor: 1
-  showEffectControls: 0
-  showCloudControls: 1
+  showEffectControls: 1
+  showCloudControls: 0
   showFlatCloudControls: 0
   showFogControls: 0
-  showSkyControls: 1
+  showSkyControls: 0
   showLightingControls: 0
   showAuroraControls: 0
   showEnvironmentControls: 0
@@ -28,7 +28,7 @@ MonoBehaviour:
   cloudsOverride:
     ambientLightIntensity: 0.187
     showLayer1: 0
-    coverageLayer1: 0.21
+    coverageLayer1: 0.163
     dilateCoverageLayer1: 1
     dilateTypeLayer1: 0.233
     typeModifierLayer1: 0.804
@@ -78,7 +78,7 @@ MonoBehaviour:
     shadowIntensity: 1
   skyOverride:
     intensity: 1
-    skyColorTint: {r: 0.4415095, g: 0.4415095, b: 0.4415095, a: 1}
+    skyColorTint: {r: 1, g: 1, b: 1, a: 1}
   fogOverride:
     fogDensity: 0
     fogHeightFalloff: 0.0039
@@ -113,7 +113,7 @@ MonoBehaviour:
       winter: 0
   lightningOverride:
     lightningStorm: 1
-    randomLightningDelay: 1
+    randomLightningDelay: 5
   environmentOverride:
     temperatureWeatherMod: 0
     wetnessTarget: 1

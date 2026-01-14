@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cbac6e678443724c9bd2baf5d564c1d, type: 3}
   m_Name: Snow
   m_EditorClassIdentifier: 
-  showEditor: 0
-  showEffectControls: 0
+  showEditor: 1
+  showEffectControls: 1
   showCloudControls: 1
   showFlatCloudControls: 0
-  showFogControls: 1
+  showFogControls: 0
   showSkyControls: 0
   showLightingControls: 0
   showAuroraControls: 0
@@ -27,7 +27,7 @@ MonoBehaviour:
   showLightningControls: 0
   cloudsOverride:
     ambientLightIntensity: 1
-    showLayer1: 1
+    showLayer1: 0
     coverageLayer1: 0.29
     dilateCoverageLayer1: 1
     dilateTypeLayer1: 1
