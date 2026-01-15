@@ -28,6 +28,10 @@ public class CannonFireInputHandler : MonoBehaviour
     [Tooltip("Cannon bullet prefab to spawn")]
     public GameObject cannonBulletPrefab;
     
+    [Header("Particle Effects")]
+    [Tooltip("Particle effect prefab to spawn when cannon fires (e.g., muzzle flash, smoke)")]
+    public GameObject firingParticleEffectPrefab;
+    
     [Tooltip("Firing position 1 (for Q key / Ship 1)")]
     public Transform firePosition1;
     
@@ -326,6 +330,12 @@ public class CannonFireInputHandler : MonoBehaviour
         
         Debug.Log($"[FIRE CANNON] All checks passed! Spawning bullet at {firePosition.position} towards {targetShip.name} at {targetShip.position}");
         
+        // Play firing sound
+        CannonAudioHandler.PlayFire();
+        
+        // Spawn firing particle effect
+        SpawnFiringParticleEffect(firePosition);
+        
         // Spawn bullet at firing position
         GameObject bullet = Instantiate(cannonBulletPrefab, firePosition.position, firePosition.rotation);
         
@@ -354,6 +364,56 @@ public class CannonFireInputHandler : MonoBehaviour
             bulletScript.targetShip = targetShip;
             bulletScript.SetIgnoreCollision(firePosition.gameObject);
             Debug.Log($"[FIRE CANNON] Added CannonBullet component and set target!");
+        }
+    }
+    
+    /// <summary>
+    /// Spawns the firing particle effect at the firing position
+    /// </summary>
+    private void SpawnFiringParticleEffect(Transform firePosition)
+    {
+        if (firingParticleEffectPrefab == null)
+        {
+            if (showDebug) Debug.LogWarning("[FIRE CANNON] Firing particle effect prefab not assigned, skipping particle effect.");
+            return;
+        }
+        
+        GameObject particleEffect = Instantiate(firingParticleEffectPrefab, firePosition.position, firePosition.rotation);
+        
+        if (particleEffect != null)
+        {
+            // Add auto-destroy component to handle cleanup
+            ParticleEffectAutoDestroy autoDestroy = particleEffect.GetComponent<ParticleEffectAutoDestroy>();
+            if (autoDestroy == null)
+            {
+                autoDestroy = particleEffect.AddComponent<ParticleEffectAutoDestroy>();
+            }
+            
+            // Try to get ParticleSystem component and play it if it exists
+            ParticleSystem ps = particleEffect.GetComponent<ParticleSystem>();
+            if (ps != null)
+            {
+                ps.Play();
+                if (showDebug) Debug.Log($"[FIRE CANNON] Spawned and played firing particle effect at {firePosition.position}");
+            }
+            else
+            {
+                // Check if there's a ParticleSystem in children
+                ps = particleEffect.GetComponentInChildren<ParticleSystem>();
+                if (ps != null)
+                {
+                    ps.Play();
+                    if (showDebug) Debug.Log($"[FIRE CANNON] Spawned and played firing particle effect (from child) at {firePosition.position}");
+                }
+                else
+                {
+                    if (showDebug) Debug.Log($"[FIRE CANNON] Spawned firing particle effect (no ParticleSystem found) at {firePosition.position}");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("[FIRE CANNON] Failed to instantiate firing particle effect prefab!");
         }
     }
 #endif

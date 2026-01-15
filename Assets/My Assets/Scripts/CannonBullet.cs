@@ -22,6 +22,10 @@ public class CannonBullet : MonoBehaviour
     [Tooltip("Target ship to aim at (will be set when spawned)")]
     public Transform targetShip;
     
+    [Header("Hit Effects")]
+    [Tooltip("Particle effect prefab to spawn when bullet hits target (e.g., explosion)")]
+    public GameObject hitParticleEffectPrefab;
+    
     [Header("Debug")]
     [Tooltip("Show debug messages")]
     public bool showDebug = false;
@@ -183,9 +187,63 @@ public class CannonBullet : MonoBehaviour
     {
         if (showDebug) Debug.Log($"CannonBullet: Hit target {targetShip.name}!");
         
-        // You can add hit effects here (explosion, damage, etc.)
+        // Play hit sound
+        CannonAudioHandler.PlayHit();
+        
+        // Spawn hit particle effect
+        SpawnHitParticleEffect(transform.position);
         
         Destroy(gameObject);
+    }
+    
+    /// <summary>
+    /// Spawns the hit particle effect at the hit position
+    /// </summary>
+    private void SpawnHitParticleEffect(Vector3 hitPosition)
+    {
+        if (hitParticleEffectPrefab == null)
+        {
+            if (showDebug) Debug.LogWarning("[CANNON BULLET] Hit particle effect prefab not assigned, skipping particle effect.");
+            return;
+        }
+        
+        GameObject particleEffect = Instantiate(hitParticleEffectPrefab, hitPosition, Quaternion.identity);
+        
+        if (particleEffect != null)
+        {
+            // Add auto-destroy component to handle cleanup
+            ParticleEffectAutoDestroy autoDestroy = particleEffect.GetComponent<ParticleEffectAutoDestroy>();
+            if (autoDestroy == null)
+            {
+                autoDestroy = particleEffect.AddComponent<ParticleEffectAutoDestroy>();
+            }
+            
+            // Try to get ParticleSystem component and play it if it exists
+            ParticleSystem ps = particleEffect.GetComponent<ParticleSystem>();
+            if (ps != null)
+            {
+                ps.Play();
+                if (showDebug) Debug.Log($"[CANNON BULLET] Spawned and played hit particle effect at {hitPosition}");
+            }
+            else
+            {
+                // Check if there's a ParticleSystem in children
+                ps = particleEffect.GetComponentInChildren<ParticleSystem>();
+                if (ps != null)
+                {
+                    ps.Play();
+                    if (showDebug) Debug.Log($"[CANNON BULLET] Spawned and played hit particle effect (from child) at {hitPosition}");
+                }
+                else
+                {
+                    if (showDebug) Debug.Log($"[CANNON BULLET] Spawned hit particle effect (no ParticleSystem found) at {hitPosition}");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("[CANNON BULLET] Failed to instantiate hit particle effect prefab!");
+        }
     }
     
     void OnCollisionEnter(Collision collision)
@@ -213,6 +271,14 @@ public class CannonBullet : MonoBehaviour
         
         // Destroy bullet on collision with anything else
         Debug.Log($"[CANNON BULLET] Collided with {collision.gameObject.name}, destroying bullet");
+        
+        // Play hit sound
+        CannonAudioHandler.PlayHit();
+        
+        // Spawn hit particle effect at collision point
+        Vector3 hitPoint = collision.contacts.Length > 0 ? collision.contacts[0].point : transform.position;
+        SpawnHitParticleEffect(hitPoint);
+        
         Destroy(gameObject);
     }
     
