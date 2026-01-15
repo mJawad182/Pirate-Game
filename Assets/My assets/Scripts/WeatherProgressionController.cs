@@ -85,9 +85,6 @@ public class WeatherProgressionController : MonoBehaviour
     public float waveRegenerationInterval = 0.5f;
 
     [Header("Debug")]
-    [Tooltip("Start weather progression when parrot is destroyed")]
-    public bool startOnParrotDestroyed = true;
-
     [Tooltip("Show debug messages")]
     public bool showDebug = false;
 
@@ -199,36 +196,25 @@ public class WeatherProgressionController : MonoBehaviour
         targetWaveMultiplier = startingWaveMultiplier;
         UpdateWaveMultiplier(startingWaveMultiplier);
 
-        // Subscribe to parrot destruction event if enabled
-        if (startOnParrotDestroyed)
+        // Subscribe to EventManager's weather system start event
+        if (EventManager.Instance != null)
         {
-            ParrotController.OnParrotDestroyed += OnParrotDestroyed;
-            if (showDebug) Debug.Log("WeatherProgressionController: Subscribed to parrot destruction event - will start when parrot is destroyed");
+            EventManager.OnStartWeatherSystem += StartWeatherProgression;
+            if (showDebug) Debug.Log("WeatherProgressionController: Subscribed to EventManager.OnStartWeatherSystem event");
+        }
+        else
+        {
+            Debug.LogWarning("WeatherProgressionController: EventManager.Instance is null! Weather system will not start automatically.");
         }
     }
     
     void OnDestroy()
     {
         // Unsubscribe from event
-        if (startOnParrotDestroyed)
+        if (EventManager.Instance != null)
         {
-            ParrotController.OnParrotDestroyed -= OnParrotDestroyed;
+            EventManager.OnStartWeatherSystem -= StartWeatherProgression;
         }
-    }
-    
-    /// <summary>
-    /// Called when parrot is destroyed - starts weather progression immediately
-    /// </summary>
-    private void OnParrotDestroyed()
-    {
-        if (isProgressionActive)
-        {
-            if (showDebug) Debug.LogWarning("WeatherProgressionController: Weather progression already active, ignoring parrot destruction event");
-            return;
-        }
-        
-        if (showDebug) Debug.Log("WeatherProgressionController: Parrot destroyed! Starting weather progression immediately...");
-        StartWeatherProgression();
     }
 
     /// <summary>

@@ -6,8 +6,6 @@ using UnityEngine;
 /// </summary>
 public class ParrotController : MonoBehaviour
 {
-    // Event fired when parrot is destroyed
-    public static System.Action OnParrotDestroyed;
     [Header("References")]
     [Tooltip("The hat GameObject that the parrot should fly towards and pick up")]
     public GameObject hatObject;
@@ -277,8 +275,9 @@ public class ParrotController : MonoBehaviour
             }
             if (showDebug) Debug.Log("ParrotController: Reached return position! Destroying parrot.");
             
-            // Fire event before destroying
-            OnParrotDestroyed?.Invoke();
+            // Fire event from EventManager before destroying (static event, can be invoked without Instance)
+            if (showDebug) Debug.Log("ParrotController: Invoking EventManager.OnParrotDestroyed event");
+            EventManager.OnParrotDestroyed?.Invoke();
             
             Destroy(gameObject);
             return;

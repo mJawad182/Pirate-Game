@@ -130,9 +130,9 @@ MonoBehaviour:
   preset: {fileID: 11400000, guid: 0fcdd472bd6a8ec429fc1e9bc978c4fa, type: 2}
   showCirrusCloudsControls: 0
   show2DCloudsControls: 0
-  cloudFlatBaseAnim: {x: -0.013198941, y: 0.100290775}
-  cloudFlatDetailAnim: {x: -0.23622969, y: 0.80127805}
-  cirrusAnim: {x: -0.15208519, y: 0.1905573}
+  cloudFlatBaseAnim: {x: 0.28053546, y: 0.33138582}
+  cloudFlatDetailAnim: {x: -0.77270025, y: -0.039456133}
+  cirrusAnim: {x: 0.99483323, y: -0.6939608}
 --- !u!114 &-5447272849285213076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,7 +184,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 375eef0084d44344ebf50cbba7c1eadb, type: 3}
   m_Name: Sky Module
   m_EditorClassIdentifier: 
-  showModuleInspector: 0
+  showModuleInspector: 1
   showSaveLoad: 1
   active: 1
   Settings:
@@ -647,10 +647,10 @@ MonoBehaviour:
     sunTex: {fileID: 2800000, guid: c95bed5306e94f24ba5802d841607ac7, type: 3}
     moonTex: {fileID: 2800000, guid: c6fd9f694390e0245b6dca5812065950, type: 3}
     moonGlowTex: {fileID: 2800000, guid: 6838e0810da4e49488b5d9a6ee76eb07, type: 3}
-    distribution0: -0.071
-    distribution1: 0.067
-    distribution2: 0.381
-    distribution3: 0.779
+    distribution0: -0.1
+    distribution1: -0.1
+    distribution2: -0.1
+    distribution3: -0.1
     mieScatteringIntensityCurve:
       serializedVersion: 2
       m_Curve:
@@ -883,7 +883,7 @@ MonoBehaviour:
       m_RotationOrder: 4
     skyColorTint: {r: 1, g: 1, b: 1, a: 1}
   preset: {fileID: 11400000, guid: 44f43418b8d8b8142863e38d1e49e174, type: 2}
-  showSkyControls: 0
+  showSkyControls: 1
   showSkySunControls: 0
   showSkyMoonControls: 0
   showSkyStarsControls: 0
@@ -1191,7 +1191,7 @@ MonoBehaviour:
   showSaveLoad: 1
   active: 1
   Settings:
-    enviroEffectSystemType: 0
+    enviroEffectSystemType: 2
     effectTypes:
     - myVFXGraph: {fileID: 0}
       prefabVFXGraph: {fileID: 0}
@@ -2266,7 +2266,7 @@ MonoBehaviour:
   showDensityControls: 0
   showTextureControls: 0
   showWindControls: 0
-  cloudAnimLayer1: {x: -0.63483423, y: -0.15834007, z: 0.44939506}
+  cloudAnimLayer1: {x: 0.80575913, y: -0.8104186, z: -0.8205252}
   cloudAnimLayer2: {x: -0.4792946, y: 0.4792946, z: 0.105380446}
   cloudAnimNonScaledLayer1: {x: 0.006009331, y: -0.006009331, z: -0.1001555}
   cloudAnimNonScaledLayer2: {x: -0.00200311, y: 0.00200311, z: -0.1001555}
