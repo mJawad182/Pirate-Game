@@ -330,6 +330,9 @@ public class CannonFireInputHandler : MonoBehaviour
         
         Debug.Log($"[FIRE CANNON] All checks passed! Spawning bullet at {firePosition.position} towards {targetShip.name} at {targetShip.position}");
         
+        // Fire cannon fired event for crow reactions
+        EventManager.OnCannonFired?.Invoke();
+        
         // Play firing sound
         CannonAudioHandler.PlayFire();
         
