@@ -12,18 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cbac6e678443724c9bd2baf5d564c1d, type: 3}
   m_Name: Cloudy 2
   m_EditorClassIdentifier: 
-  showEditor: 0
+  showEditor: 1
   showEffectControls: 0
-  showCloudControls: 1
-  showFlatCloudControls: 1
-  showFogControls: 1
+  showCloudControls: 0
+  showFlatCloudControls: 0
+  showFogControls: 0
   showSkyControls: 0
-  showLightingControls: 1
+  showLightingControls: 0
   showAuroraControls: 0
   showEnvironmentControls: 0
-  showAudioControls: 0
-  showAmbientAudioControls: 0
-  showWeatherAudioControls: 0
+  showAudioControls: 1
+  showAmbientAudioControls: 1
+  showWeatherAudioControls: 1
   showLightningControls: 0
   cloudsOverride:
     ambientLightIntensity: 1
@@ -100,16 +100,16 @@ MonoBehaviour:
     effectsOverride: []
   audioOverride:
     ambientOverride:
-    - showEditor: 0
+    - showEditor: 1
       name: Day
-      volume: 1
+      volume: 0.3
       spring: 0
       summer: 0
       autumn: 0
       winter: 0
-    - showEditor: 0
+    - showEditor: 1
       name: Night
-      volume: 1
+      volume: 0.3
       spring: 0
       summer: 0
       autumn: 0

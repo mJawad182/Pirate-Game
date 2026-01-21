@@ -30,12 +30,19 @@ public class ShipTextMessageHandler : MonoBehaviour
         SetTextActive(ship3Text, false);
         SetTextActive(ship4Text, false);
         
+        // Check if text objects are assigned
+        Debug.Log($"[TEXT HANDLER INIT] Ship 1 Text: {(ship1Text != null ? ship1Text.name : "NOT ASSIGNED")}");
+        Debug.Log($"[TEXT HANDLER INIT] Ship 2 Text: {(ship2Text != null ? ship2Text.name : "NOT ASSIGNED")}");
+        Debug.Log($"[TEXT HANDLER INIT] Ship 3 Text: {(ship3Text != null ? ship3Text.name : "NOT ASSIGNED")}");
+        Debug.Log($"[TEXT HANDLER INIT] Ship 4 Text: {(ship4Text != null ? ship4Text.name : "NOT ASSIGNED")}");
+        
         // Subscribe to ship arrival events
         EventManager.OnEnemyShip1Arrive += OnShip1Arrive;
         EventManager.OnEnemyShip2Arrive += OnShip2Arrive;
         EventManager.OnEnemyShip3Arrive += OnShip3Arrive;
         EventManager.OnEnemyShip4Arrive += OnShip4Arrive;
         
+        Debug.Log("[TEXT HANDLER INIT] Subscribed to all ship arrival events");
         if (showDebug) Debug.Log("ShipTextMessageHandler: Subscribed to all ship arrival events");
     }
     
@@ -100,7 +107,55 @@ public class ShipTextMessageHandler : MonoBehaviour
     {
         if (textObject != null)
         {
+            // If activating, ensure all parent objects (Canvas, UI panels, etc.) are also active
+            if (active)
+            {
+                // Enable all parent objects up to the root
+                Transform parent = textObject.transform.parent;
+                while (parent != null)
+                {
+                    if (!parent.gameObject.activeSelf)
+                    {
+                        Debug.Log($"[TEXT HANDLER] Enabling parent GameObject: {parent.name}");
+                        parent.gameObject.SetActive(true);
+                    }
+                    parent = parent.parent;
+                }
+                
+                // Also check for Canvas component and ensure it's enabled
+                Canvas canvas = textObject.GetComponentInParent<Canvas>();
+                if (canvas != null && !canvas.gameObject.activeSelf)
+                {
+                    Debug.Log($"[TEXT HANDLER] Enabling Canvas: {canvas.name}");
+                    canvas.gameObject.SetActive(true);
+                }
+            }
+            
+            // Now set the text object active
             textObject.SetActive(active);
+            Debug.Log($"[TEXT HANDLER] SetTextActive called: GameObject={textObject.name}, Active={active}, Result={textObject.activeSelf}, Visible={IsGameObjectVisible(textObject)}");
         }
+        else
+        {
+            Debug.LogWarning($"[TEXT HANDLER] SetTextActive called but textObject is NULL! Cannot set active state to {active}");
+        }
+    }
+    
+    /// <summary>
+    /// Checks if a GameObject is actually visible (active and all parents are active)
+    /// </summary>
+    private bool IsGameObjectVisible(GameObject obj)
+    {
+        if (obj == null) return false;
+        if (!obj.activeSelf) return false;
+        
+        Transform parent = obj.transform.parent;
+        while (parent != null)
+        {
+            if (!parent.gameObject.activeSelf) return false;
+            parent = parent.parent;
+        }
+        
+        return true;
     }
 }

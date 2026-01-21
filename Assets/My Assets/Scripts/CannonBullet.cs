@@ -23,8 +23,11 @@ public class CannonBullet : MonoBehaviour
     public Transform targetShip;
     
     [Header("Hit Effects")]
-    [Tooltip("Particle effect prefab to spawn when bullet hits target (e.g., explosion)")]
+    [Tooltip("First particle effect prefab to spawn when bullet hits target (e.g., explosion)")]
     public GameObject hitParticleEffectPrefab;
+    
+    [Tooltip("Second particle effect prefab to spawn when bullet hits target (plays simultaneously with first)")]
+    public GameObject hitParticleEffectPrefab2;
     
     [Header("Debug")]
     [Tooltip("Show debug messages")]
@@ -185,13 +188,19 @@ public class CannonBullet : MonoBehaviour
     /// </summary>
     private void OnHitTarget()
     {
+        Vector3 hitPosition = transform.position;
+        
         if (showDebug) Debug.Log($"CannonBullet: Hit target {targetShip.name}!");
+        
+        // Fire cannon hit event with position
+        EventManager.OnCannonHit?.Invoke(hitPosition);
         
         // Play hit sound
         CannonAudioHandler.PlayHit();
         
-        // Spawn hit particle effect
-        SpawnHitParticleEffect(transform.position);
+        // Spawn hit particle effects (both at same time)
+        SpawnHitParticleEffect(hitPosition);
+        SpawnHitParticleEffect2(hitPosition);
         
         Destroy(gameObject);
     }
@@ -246,6 +255,56 @@ public class CannonBullet : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Spawns the second hit particle effect at the hit position
+    /// </summary>
+    private void SpawnHitParticleEffect2(Vector3 hitPosition)
+    {
+        if (hitParticleEffectPrefab2 == null)
+        {
+            if (showDebug) Debug.LogWarning("[CANNON BULLET] Second hit particle effect prefab not assigned, skipping particle effect.");
+            return;
+        }
+        
+        GameObject particleEffect = Instantiate(hitParticleEffectPrefab2, hitPosition, Quaternion.identity);
+        
+        if (particleEffect != null)
+        {
+            // Add auto-destroy component to handle cleanup
+            ParticleEffectAutoDestroy autoDestroy = particleEffect.GetComponent<ParticleEffectAutoDestroy>();
+            if (autoDestroy == null)
+            {
+                autoDestroy = particleEffect.AddComponent<ParticleEffectAutoDestroy>();
+            }
+            
+            // Try to get ParticleSystem component and play it if it exists
+            ParticleSystem ps = particleEffect.GetComponent<ParticleSystem>();
+            if (ps != null)
+            {
+                ps.Play();
+                if (showDebug) Debug.Log($"[CANNON BULLET] Spawned and played second hit particle effect at {hitPosition}");
+            }
+            else
+            {
+                // Check if there's a ParticleSystem in children
+                ps = particleEffect.GetComponentInChildren<ParticleSystem>();
+                if (ps != null)
+                {
+                    ps.Play();
+                    if (showDebug) Debug.Log($"[CANNON BULLET] Spawned and played second hit particle effect (from child) at {hitPosition}");
+                }
+                else
+                {
+                    if (showDebug) Debug.Log($"[CANNON BULLET] Spawned second hit particle effect (no ParticleSystem found) at {hitPosition}");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("[CANNON BULLET] Failed to instantiate second hit particle effect prefab!");
+        }
+    }
+    
     void OnCollisionEnter(Collision collision)
     {
         // Ignore collisions for a short time after spawning (to avoid immediate collision with firing position)
@@ -272,12 +331,18 @@ public class CannonBullet : MonoBehaviour
         // Destroy bullet on collision with anything else
         Debug.Log($"[CANNON BULLET] Collided with {collision.gameObject.name}, destroying bullet");
         
+        // Get hit position
+        Vector3 hitPoint = collision.contacts.Length > 0 ? collision.contacts[0].point : transform.position;
+        
+        // Fire cannon hit event with position
+        EventManager.OnCannonHit?.Invoke(hitPoint);
+        
         // Play hit sound
         CannonAudioHandler.PlayHit();
         
-        // Spawn hit particle effect at collision point
-        Vector3 hitPoint = collision.contacts.Length > 0 ? collision.contacts[0].point : transform.position;
+        // Spawn hit particle effects at collision point (both at same time)
         SpawnHitParticleEffect(hitPoint);
+        SpawnHitParticleEffect2(hitPoint);
         
         Destroy(gameObject);
     }

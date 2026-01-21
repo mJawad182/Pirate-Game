@@ -155,6 +155,7 @@ MonoBehaviour:
   gravityMultiplier: 1
   targetShip: {fileID: 0}
   hitParticleEffectPrefab: {fileID: 1121192042590650, guid: e1b08032bec16ba4eb1ae23cbd572664, type: 3}
+  hitParticleEffectPrefab2: {fileID: 1324124168371050, guid: 9eb3b1a11c610cd418079f132e291197, type: 3}
   showDebug: 0
 --- !u!1001 &4271476652089240223
 PrefabInstance:

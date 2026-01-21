@@ -16,8 +16,11 @@ public class EventManager : MonoBehaviour
     // Event fired to start weather system
     public static System.Action OnStartWeatherSystem;
     
-    // Event fired when cannon is fired
-    public static System.Action OnCannonFired;
+    // Event fired when cannon is fired (passes firing position)
+    public static System.Action<Vector3> OnCannonFired;
+    
+    // Event fired when cannon bullet hits (passes hit position)
+    public static System.Action<Vector3> OnCannonHit;
     
     [Header("Crest Water Renderer Camera Switch")]
     [Tooltip("Second camera to switch to (assign in Inspector)")]

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cbac6e678443724c9bd2baf5d564c1d, type: 3}
   m_Name: Foggy
   m_EditorClassIdentifier: 
-  showEditor: 0
+  showEditor: 1
   showEffectControls: 0
   showCloudControls: 0
   showFlatCloudControls: 0
@@ -21,7 +21,7 @@ MonoBehaviour:
   showLightingControls: 0
   showAuroraControls: 0
   showEnvironmentControls: 0
-  showAudioControls: 0
+  showAudioControls: 1
   showAmbientAudioControls: 0
   showWeatherAudioControls: 0
   showLightningControls: 0

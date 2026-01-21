@@ -165,6 +165,9 @@ MonoBehaviour:
   directionChangeInterval: 3
   maxDirectionChange: 45
   verticalMovementRange: 0
+  minHeightAboveCamera: 5
+  minAbsoluteHeight: -1000
+  useAbsoluteHeight: 0
   destroyDistance: 500
   distanceCheckInterval: 2
   useLifetime: 1
@@ -172,4 +175,18 @@ MonoBehaviour:
   lifetimeVariation: 5
   mainCamera: {fileID: 0}
   autoFindCamera: 1
+  cannonReactionSpeedMultiplier: 5
+  cannonReactionDuration: 8
+  cannonReactionDistance: 1000
+  showGizmos: 0
+  groupCohesion: 0.7
+  groupSeparation: 0.3
+  groupSeparationDistance: 3
+  crowSound: {fileID: 8300000, guid: 3461222594d8e5947b86df2786dd83a2, type: 3}
+  soundVolume: 1
   showDebug: 0
+  groupID: -1
+  isInGroup: 0
+  groupCenter: {x: 0, y: 0, z: 0}
+  groupDirection: {x: 0, y: 0, z: 0}
+  crowSpawner: {fileID: 0}

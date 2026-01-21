@@ -71,8 +71,8 @@ public class CrowController : MonoBehaviour
     [Tooltip("Auto-find main camera if not assigned")]
     public bool autoFindCamera = true;
     
-    [Header("Cannon Fire Reaction")]
-    [Tooltip("Speed multiplier when reacting to cannon fire (how fast crow flees)")]
+    [Header("Cannon Hit Reaction")]
+    [Tooltip("Speed multiplier when reacting to cannon hits (how fast crow flees)")]
     [Range(1f, 5f)]
     public float cannonReactionSpeedMultiplier = 2f;
     
@@ -80,9 +80,53 @@ public class CrowController : MonoBehaviour
     [Range(1f, 30f)]
     public float cannonReactionDuration = 5f;
     
+    [Tooltip("Maximum distance from cannon fire/hit to react (crows beyond this distance won't react)")]
+    [Range(10f, 1000f)]
+    public float cannonReactionDistance = 500f;
+    
+    [Tooltip("Show gizmos in Scene view (reaction range, movement direction, etc.)")]
+    public bool showGizmos = true;
+    
+    [Header("Group Movement")]
+    [Tooltip("Strength of group cohesion (how much crow follows group direction)")]
+    [Range(0f, 1f)]
+    public float groupCohesion = 0.7f;
+    
+    [Tooltip("Strength of separation (how much crow avoids crowding others)")]
+    [Range(0f, 1f)]
+    public float groupSeparation = 0.3f;
+    
+    [Tooltip("Desired distance from other crows in group")]
+    [Range(1f, 10f)]
+    public float groupSeparationDistance = 3f;
+    
+    [Header("Audio")]
+    [Tooltip("Audio clip to play (crow caw sound)")]
+    public AudioClip crowSound;
+    
+    [Tooltip("Volume of the crow sound")]
+    [Range(0f, 1f)]
+    public float soundVolume = 0.5f;
+    
     [Header("Debug")]
     [Tooltip("Show debug messages")]
     public bool showDebug = false;
+    
+    // Group behavior fields (set by CrowSpawner)
+    [HideInInspector]
+    public int groupID = -1;
+    
+    [HideInInspector]
+    public bool isInGroup = false;
+    
+    [HideInInspector]
+    public Vector3 groupCenter;
+    
+    [HideInInspector]
+    public Vector3 groupDirection;
+    
+    [HideInInspector]
+    public CrowSpawner crowSpawner;
     
     private Rigidbody rb;
     private Vector3 currentDirection;
@@ -92,10 +136,20 @@ public class CrowController : MonoBehaviour
     private CrowSpawner spawner;
     private float spawnTime;
     private float actualLifetime;
-    private bool hasReactedToCannon = false;
     private bool isReactingToCannon = false;
     private float cannonReactionEndTime = 0f;
     private float normalSpeed;
+    private Vector3 cannonReactionDirection = Vector3.zero;
+    private AudioSource audioSource;
+    
+    // Path following
+    private bool followPath = false;
+    private Vector3 pathStart = Vector3.zero;
+    private Vector3 pathEnd = Vector3.zero;
+    private float pathT = 0f; // Position along path (0 = start, 1 = end)
+    private Vector3 pathDirection = Vector3.zero; // Direction along path (1 = towards end, -1 = towards start)
+    private Vector3 clusterOffset = Vector3.zero; // Offset from path center for cluster formation
+    private float clusterSpeedVariation = 0f; // Speed variation for natural cluster movement
     
     void Start()
     {
@@ -129,6 +183,10 @@ public class CrowController : MonoBehaviour
         
         // Find spawner to register with
         spawner = FindObjectOfType<CrowSpawner>();
+        if (spawner == null && crowSpawner != null)
+        {
+            spawner = crowSpawner;
+        }
         
         // Record spawn time for lifetime tracking
         spawnTime = Time.time;
@@ -151,16 +209,56 @@ public class CrowController : MonoBehaviour
         // Store normal speed
         normalSpeed = currentSpeed;
         
-        // Subscribe to cannon fire event
+        // Subscribe to cannon fire and hit events (react to both)
+        // Subscribe even if EventManager.Instance is null (static events work without instance)
         EventManager.OnCannonFired += OnCannonFired;
+        EventManager.OnCannonHit += OnCannonHit;
+        if (showDebug) Debug.Log($"CrowController: Subscribed to cannon fire/hit events. Reaction Distance: {cannonReactionDistance}m");
         
-        if (showDebug) Debug.Log($"CrowController: Initialized crow at {transform.position}");
+        // Setup audio source for playing sounds
+        SetupAudio();
+        
+        if (showDebug) Debug.Log($"CrowController: Initialized crow at {transform.position}, Reaction Distance: {cannonReactionDistance}m");
+    }
+    
+    /// <summary>
+    /// Sets up the AudioSource component for playing crow sounds
+    /// </summary>
+    private void SetupAudio()
+    {
+        // Get or add AudioSource component
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        
+        // Configure AudioSource
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 1f; // 3D sound
+        audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        audioSource.minDistance = 5f;
+        audioSource.maxDistance = 500f;
+        audioSource.volume = soundVolume;
+    }
+    
+    /// <summary>
+    /// Plays the crow sound (called by CrowSpawner)
+    /// </summary>
+    public void PlayCrowSound()
+    {
+        if (crowSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(crowSound, soundVolume);
+            if (showDebug) Debug.Log($"CrowController: Playing crow sound");
+        }
     }
     
     void OnDestroy()
     {
-        // Unsubscribe from cannon fire event
+        // Unsubscribe from cannon events
         EventManager.OnCannonFired -= OnCannonFired;
+        EventManager.OnCannonHit -= OnCannonHit;
     }
     
     /// <summary>
@@ -194,6 +292,7 @@ public class CrowController : MonoBehaviour
         {
             isReactingToCannon = false;
             currentSpeed = normalSpeed;
+            cannonReactionDirection = Vector3.zero;
             if (showDebug) Debug.Log("CrowController: Cannon reaction ended, returning to normal flight");
         }
         
@@ -219,8 +318,26 @@ public class CrowController : MonoBehaviour
     /// </summary>
     private void MoveCrow()
     {
+        // PRIORITY 1: If reacting to cannon, disable path following and scatter immediately
+        if (isReactingToCannon)
+        {
+            // Disable path following when scattering (ensure it's off)
+            followPath = false;
+            
+            // Keep direction locked to reaction direction
+            if (cannonReactionDirection != Vector3.zero)
+            {
+                currentDirection = cannonReactionDirection;
+            }
+        }
+        // PRIORITY 2: Follow path only if enabled and NOT reacting to cannon
+        else if (followPath && pathStart != Vector3.zero && pathEnd != Vector3.zero)
+        {
+            FollowPath();
+            return; // Path following handles movement, skip normal movement code
+        }
         // Don't change direction during cannon reaction (crow is fleeing)
-        if (!isReactingToCannon && Time.time - lastDirectionChangeTime >= directionChangeInterval)
+        else if (Time.time - lastDirectionChangeTime >= directionChangeInterval)
         {
             ChangeDirection();
             lastDirectionChangeTime = Time.time;
@@ -233,6 +350,13 @@ public class CrowController : MonoBehaviour
             float verticalVariation = Mathf.Sin(Time.time * 0.5f) * verticalMovementRange * 0.1f;
             movementDirection.y += verticalVariation;
         }
+        
+        // Apply group behavior if in a group (disabled during cannon reaction)
+        if (isInGroup && !isReactingToCannon)
+        {
+            movementDirection = ApplyGroupBehavior(movementDirection);
+        }
+        
         movementDirection.Normalize();
         
         // Move using Rigidbody
@@ -253,55 +377,171 @@ public class CrowController : MonoBehaviour
                 movementDirection.y = Mathf.Abs(movementDirection.y) * 0.5f; // Push upward
                 movementDirection.Normalize();
                 currentDirection = movementDirection;
+                // Update reaction direction too if reacting
+                if (isReactingToCannon)
+                {
+                    cannonReactionDirection = movementDirection;
+                }
             }
         }
         
-        // Rotate towards movement direction
+        // Rotate towards movement direction - faster rotation during cannon reaction
         if (movementDirection != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(movementDirection);
-            Quaternion smoothedRotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            // Use faster rotation during cannon reaction (3x speed for quick but smooth turn)
+            float effectiveRotationSpeed = isReactingToCannon ? rotationSpeed * 3f : rotationSpeed;
+            Quaternion smoothedRotation = Quaternion.Slerp(rb.rotation, targetRotation, effectiveRotationSpeed * Time.fixedDeltaTime);
             rb.MoveRotation(smoothedRotation);
         }
     }
     
     /// <summary>
-    /// Called when cannon is fired - makes crow flee away from camera
+    /// Applies group behavior: cohesion and separation
     /// </summary>
-    private void OnCannonFired()
+    private Vector3 ApplyGroupBehavior(Vector3 baseDirection)
     {
-        // Only react once per crow
-        if (hasReactedToCannon)
+        if (crowSpawner == null || groupID < 0) return baseDirection;
+        
+        Vector3 groupBehaviorDirection = baseDirection;
+        
+        // Get group members
+        System.Collections.Generic.List<GameObject> groupMembers = crowSpawner.GetGroupCrows(groupID);
+        if (groupMembers.Count <= 1) return baseDirection; // No other members
+        
+        // Get current group center
+        Vector3 currentGroupCenter = crowSpawner.GetGroupCenter(groupID);
+        if (currentGroupCenter == Vector3.zero) currentGroupCenter = groupCenter;
+        
+        // Cohesion: steer towards group center and follow group direction
+        Vector3 toGroupCenter = (currentGroupCenter - transform.position).normalized;
+        Vector3 cohesionDirection = Vector3.Lerp(baseDirection, toGroupCenter + groupDirection.normalized * 0.5f, groupCohesion * 0.5f).normalized;
+        
+        // Separation: avoid crowding nearby group members
+        Vector3 separationDirection = Vector3.zero;
+        int nearbyCount = 0;
+        
+        foreach (GameObject otherCrow in groupMembers)
         {
-            if (showDebug) Debug.Log("CrowController: Crow already reacted to cannon fire, ignoring");
+            if (otherCrow == null || otherCrow == gameObject) continue;
+            
+            Vector3 offset = transform.position - otherCrow.transform.position;
+            float distance = offset.magnitude;
+            
+            if (distance > 0 && distance < groupSeparationDistance)
+            {
+                separationDirection += offset.normalized / distance; // Closer = stronger separation
+                nearbyCount++;
+            }
+        }
+        
+        if (nearbyCount > 0)
+        {
+            separationDirection /= nearbyCount;
+            separationDirection.Normalize();
+            groupBehaviorDirection = Vector3.Lerp(cohesionDirection, separationDirection, groupSeparation).normalized;
+        }
+        else
+        {
+            groupBehaviorDirection = cohesionDirection;
+        }
+        
+        // Update current direction to gradually align with group behavior
+        currentDirection = Vector3.Lerp(currentDirection, groupBehaviorDirection, Time.fixedDeltaTime * 2f).normalized;
+        
+        return groupBehaviorDirection;
+    }
+    
+    /// <summary>
+    /// Called when cannon is fired - makes crow flee away from firing position
+    /// </summary>
+    private void OnCannonFired(Vector3 firePosition)
+    {
+        // Check if crow is within reaction distance
+        float distanceToFire = Vector3.Distance(transform.position, firePosition);
+        
+        if (showDebug) Debug.Log($"[CROW REACTION] Crow at {transform.position} received cannon fire event at {firePosition}. Distance: {distanceToFire:F1}m, Reaction Distance: {cannonReactionDistance}m, FollowPath: {followPath}");
+        
+        if (distanceToFire > cannonReactionDistance)
+        {
+            // Too far, don't react
+            if (showDebug) Debug.Log($"[CROW REACTION] Crow too far from cannon fire ({distanceToFire:F1}m > {cannonReactionDistance}m), not reacting");
             return;
         }
         
-        if (mainCamera == null)
-        {
-            if (showDebug) Debug.LogWarning("CrowController: Cannot react to cannon - main camera not found");
-            return;
-        }
+        // Disable path following immediately when cannon fires (scatter from path)
+        followPath = false;
         
-        // Mark as reacted
-        hasReactedToCannon = true;
+        // Start or extend reaction
         isReactingToCannon = true;
         cannonReactionEndTime = Time.time + cannonReactionDuration;
         
-        // Calculate direction away from camera
+        // Calculate direction away from firing position
         Vector3 crowPosition = transform.position;
-        Vector3 cameraPosition = mainCamera.transform.position;
-        Vector3 directionAwayFromCamera = (crowPosition - cameraPosition).normalized;
+        Vector3 directionAwayFromFire = (crowPosition - firePosition).normalized;
         
-        // Ensure horizontal component (keep some upward bias to avoid going underwater)
-        directionAwayFromCamera.y = Mathf.Max(0.1f, directionAwayFromCamera.y); // Keep some upward component
-        directionAwayFromCamera.Normalize();
+        // If direction is too horizontal, add some upward bias to prevent going underwater
+        if (Mathf.Abs(directionAwayFromFire.y) < 0.2f)
+        {
+            directionAwayFromFire.y = 0.3f; // Add upward component
+            directionAwayFromFire.Normalize();
+        }
+        
+        // Store reaction direction
+        cannonReactionDirection = directionAwayFromFire;
         
         // Set new direction and speed
-        currentDirection = directionAwayFromCamera;
+        currentDirection = directionAwayFromFire;
         currentSpeed = normalSpeed * cannonReactionSpeedMultiplier;
         
-        if (showDebug) Debug.Log($"CrowController: Reacting to cannon fire! Fleeing away from camera at {currentSpeed:F1} speed for {cannonReactionDuration}s");
+        Debug.Log($"[CROW SCATTER] Crow at {transform.position} SCATTERING from cannon fire at {firePosition}! Distance: {distanceToFire:F1}m, FollowPath disabled, Fleeing at {currentSpeed:F1} speed for {cannonReactionDuration}s");
+        if (showDebug) Debug.Log($"CrowController: Reacting to cannon fire at {firePosition}! Distance: {distanceToFire:F1}m, Fleeing at {currentSpeed:F1} speed for {cannonReactionDuration}s");
+    }
+    
+    /// <summary>
+    /// Called when cannon bullet hits - makes crow flee away from hit position
+    /// </summary>
+    private void OnCannonHit(Vector3 hitPosition)
+    {
+        // Check if crow is within reaction distance
+        float distanceToHit = Vector3.Distance(transform.position, hitPosition);
+        
+        if (showDebug) Debug.Log($"[CROW REACTION] Crow at {transform.position} received cannon hit event at {hitPosition}. Distance: {distanceToHit:F1}m, Reaction Distance: {cannonReactionDistance}m, FollowPath: {followPath}");
+        
+        if (distanceToHit > cannonReactionDistance)
+        {
+            // Too far, don't react
+            if (showDebug) Debug.Log($"[CROW REACTION] Crow too far from cannon hit ({distanceToHit:F1}m > {cannonReactionDistance}m), not reacting");
+            return;
+        }
+        
+        // Disable path following immediately when cannon hits (scatter from path)
+        followPath = false;
+        
+        // Start or extend reaction
+        isReactingToCannon = true;
+        cannonReactionEndTime = Time.time + cannonReactionDuration;
+        
+        // Calculate direction away from hit position
+        Vector3 crowPosition = transform.position;
+        Vector3 directionAwayFromHit = (crowPosition - hitPosition).normalized;
+        
+        // If direction is too horizontal, add some upward bias to prevent going underwater
+        if (Mathf.Abs(directionAwayFromHit.y) < 0.2f)
+        {
+            directionAwayFromHit.y = 0.3f; // Add upward component
+            directionAwayFromHit.Normalize();
+        }
+        
+        // Store reaction direction
+        cannonReactionDirection = directionAwayFromHit;
+        
+        // Set new direction and speed
+        currentDirection = directionAwayFromHit;
+        currentSpeed = normalSpeed * cannonReactionSpeedMultiplier;
+        
+        Debug.Log($"[CROW SCATTER] Crow at {transform.position} SCATTERING from cannon hit at {hitPosition}! Distance: {distanceToHit:F1}m, FollowPath disabled, Fleeing at {currentSpeed:F1} speed for {cannonReactionDuration}s");
+        if (showDebug) Debug.Log($"CrowController: Reacting to cannon hit at {hitPosition}! Distance: {distanceToHit:F1}m, Fleeing at {currentSpeed:F1} speed for {cannonReactionDuration}s");
     }
     
     /// <summary>
@@ -384,6 +624,90 @@ public class CrowController : MonoBehaviour
     }
     
     /// <summary>
+    /// Makes the crow follow its assigned path with cluster formation
+    /// </summary>
+    private void FollowPath()
+    {
+        Vector3 pathVector = pathEnd - pathStart;
+        float pathLength = pathVector.magnitude;
+        
+        if (pathLength < 0.01f) return; // Invalid path
+        
+        Vector3 normalizedPath = pathVector.normalized;
+        
+        // Calculate movement along path with speed variation for natural cluster movement
+        float effectiveSpeed = currentSpeed + clusterSpeedVariation;
+        float moveDistance = effectiveSpeed * Time.fixedDeltaTime;
+        float moveT = moveDistance / pathLength;
+        
+        // Determine direction: pathDirection should be normalized direction vector
+        // If pathDirection dot normalizedPath > 0, moving towards end, else towards start
+        bool movingTowardsEnd = Vector3.Dot(pathDirection, normalizedPath) > 0;
+        
+        // Update path position - always move towards end (no reversing)
+        pathT += moveT;
+        
+        // If reached end, destroy the crow (don't reverse)
+        if (pathT >= 1f)
+        {
+            pathT = 1f;
+            // Destroy crow when it reaches the end
+            if (spawner != null)
+            {
+                spawner.RemoveCrow(gameObject);
+            }
+            Destroy(gameObject);
+            return;
+        }
+        
+        // Clamp pathT
+        pathT = Mathf.Clamp01(pathT);
+        
+        // Calculate base position along path
+        Vector3 basePosition = Vector3.Lerp(pathStart, pathEnd, pathT);
+        
+        // Apply cluster offset for natural formation (some crows ahead, some behind, some to sides)
+        Vector3 targetPosition = basePosition + clusterOffset;
+        
+        // Add subtle movement variation for natural cluster behavior (horizontal and vertical)
+        if (isInGroup)
+        {
+            // Small random offset that changes slowly for natural movement (includes vertical component)
+            float timeOffset = Time.time * 0.3f + (groupID * 10f); // Different phase for each group
+            Vector3 naturalVariation = new Vector3(
+                Mathf.Sin(timeOffset) * 0.5f,
+                Mathf.Cos(timeOffset * 0.7f) * 0.3f, // Vertical variation for natural cluster movement
+                Mathf.Sin(timeOffset * 1.3f) * 0.4f
+            );
+            targetPosition += naturalVariation;
+        }
+        
+        // Set direction to be along the path (with slight variation for natural look)
+        Vector3 pathDir = pathDirection.normalized;
+        if (isInGroup && clusterOffset.magnitude > 0.1f)
+        {
+            // Slight direction adjustment based on cluster offset for more natural movement
+            Vector3 offsetDirection = clusterOffset.normalized * 0.1f;
+            currentDirection = (pathDir + offsetDirection).normalized;
+        }
+        else
+        {
+            currentDirection = pathDir;
+        }
+        
+        // Move to target position
+        rb.MovePosition(targetPosition);
+        
+        // Rotate towards movement direction
+        if (currentDirection != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(currentDirection);
+            Quaternion smoothedRotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            rb.MoveRotation(smoothedRotation);
+        }
+    }
+    
+    /// <summary>
     /// Checks lifetime and destroys crow if time has expired
     /// </summary>
     private void CheckLifetimeAndDestroy()
@@ -428,17 +752,59 @@ public class CrowController : MonoBehaviour
         }
     }
     
-    void OnDrawGizmosSelected()
+    void OnDrawGizmos()
     {
-        // Draw destroy distance sphere
-        if (mainCamera != null)
+        if (!showGizmos) return;
+        
+        // Draw cannon reaction distance sphere (yellow)
+        Gizmos.color = new Color(1f, 1f, 0f, 0.3f); // Yellow with transparency
+        Gizmos.DrawWireSphere(transform.position, cannonReactionDistance);
+        
+        // Draw movement direction (blue)
+        if (Application.isPlaying && currentDirection != Vector3.zero)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawRay(transform.position, currentDirection * 5f);
+        }
+        
+        // Draw reaction direction if reacting (red)
+        if (Application.isPlaying && isReactingToCannon && cannonReactionDirection != Vector3.zero)
         {
             Gizmos.color = Color.red;
+            Gizmos.DrawRay(transform.position, cannonReactionDirection * 8f);
+        }
+    }
+    
+    void OnDrawGizmosSelected()
+    {
+        if (!showGizmos) return;
+        
+        // Draw destroy distance sphere (red, only when selected)
+        if (mainCamera != null)
+        {
+            Gizmos.color = new Color(1f, 0f, 0f, 0.5f); // Red with transparency
             Gizmos.DrawWireSphere(mainCamera.transform.position, destroyDistance);
         }
         
-        // Draw movement direction
-        Gizmos.color = Color.blue;
-        Gizmos.DrawRay(transform.position, currentDirection * 5f);
+        // Draw cannon reaction distance sphere with fill (yellow, only when selected)
+        Gizmos.color = new Color(1f, 1f, 0f, 0.2f); // Yellow with more transparency for fill
+        Gizmos.DrawSphere(transform.position, cannonReactionDistance);
+        
+        Gizmos.color = new Color(1f, 1f, 0f, 0.8f); // Yellow wireframe
+        Gizmos.DrawWireSphere(transform.position, cannonReactionDistance);
+        
+        // Draw movement direction (blue, thicker when selected)
+        if (Application.isPlaying && currentDirection != Vector3.zero)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(transform.position, currentDirection * 8f);
+        }
+        
+        // Draw reaction direction if reacting (red, thicker when selected)
+        if (Application.isPlaying && isReactingToCannon && cannonReactionDirection != Vector3.zero)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawRay(transform.position, cannonReactionDirection * 10f);
+        }
     }
 }

@@ -32,6 +32,19 @@ public class CannonFireInputHandler : MonoBehaviour
     [Tooltip("Particle effect prefab to spawn when cannon fires (e.g., muzzle flash, smoke)")]
     public GameObject firingParticleEffectPrefab;
     
+    [Header("Audio")]
+    [Tooltip("Audio clip to play when cannon fires")]
+    public AudioClip cannonFireSound;
+    
+    [Tooltip("Volume of the cannon fire sound")]
+    [Range(0f, 1f)]
+    public float cannonFireSoundVolume = 0.7f;
+    
+    [Header("Cannon Fire Cooldown")]
+    [Tooltip("Cooldown period between cannon fires (seconds)")]
+    [Range(0f, 10f)]
+    public float cannonFireCooldown = 3f;
+    
     [Tooltip("Firing position 1 (for Q key / Ship 1)")]
     public Transform firePosition1;
     
@@ -67,6 +80,8 @@ public class CannonFireInputHandler : MonoBehaviour
     private InputAction cannonFire4;
     
     private static CannonFireInputHandler instance;
+    private AudioSource audioSource;
+    private float lastCannonFireTime = 0f;
     
     // Track which ships have arrived (input actions disabled until ship arrives)
     private bool ship1Arrived = false;
@@ -77,6 +92,9 @@ public class CannonFireInputHandler : MonoBehaviour
     void Start()
     {
         instance = this;
+        
+        // Setup audio source for cannon fire sound
+        SetupAudio();
         
         // Auto-find target ships if not assigned
         AutoFindTargetShips();
@@ -308,6 +326,15 @@ public class CannonFireInputHandler : MonoBehaviour
     /// </summary>
     private void FireCannon(int cannonID, Transform firePosition, Transform targetShip)
     {
+        // Check cooldown
+        float timeSinceLastFire = Time.time - lastCannonFireTime;
+        if (timeSinceLastFire < cannonFireCooldown)
+        {
+            float remainingCooldown = cannonFireCooldown - timeSinceLastFire;
+            if (showDebug) Debug.Log($"[FIRE CANNON] Cannon {cannonID} is on cooldown! {remainingCooldown:F2}s remaining");
+            return;
+        }
+        
         Debug.Log($"[FIRE CANNON] Attempting to fire cannon {cannonID}...");
         
         if (cannonBulletPrefab == null)
@@ -330,10 +357,27 @@ public class CannonFireInputHandler : MonoBehaviour
         
         Debug.Log($"[FIRE CANNON] All checks passed! Spawning bullet at {firePosition.position} towards {targetShip.name} at {targetShip.position}");
         
-        // Fire cannon fired event for crow reactions
-        EventManager.OnCannonFired?.Invoke();
+        // Fire cannon fired event for crow reactions (pass firing position)
+        Debug.Log($"[FIRE CANNON] Firing OnCannonFired event with position: {firePosition.position}");
+        if (EventManager.OnCannonFired != null)
+        {
+            Debug.Log($"[FIRE CANNON] Event has {EventManager.OnCannonFired.GetInvocationList().Length} subscribers");
+            EventManager.OnCannonFired.Invoke(firePosition.position);
+            Debug.Log($"[FIRE CANNON] Event invoked successfully!");
+        }
+        else
+        {
+            Debug.LogWarning($"[FIRE CANNON] OnCannonFired event is NULL! No subscribers!");
+        }
         
-        // Play firing sound
+        // Play cannon fire sound (if assigned)
+        if (cannonFireSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(cannonFireSound, cannonFireSoundVolume);
+            if (showDebug) Debug.Log("CannonFireInputHandler: Playing cannon fire sound");
+        }
+        
+        // Play firing sound (from CannonAudioHandler)
         CannonAudioHandler.PlayFire();
         
         // Spawn firing particle effect
@@ -368,6 +412,10 @@ public class CannonFireInputHandler : MonoBehaviour
             bulletScript.SetIgnoreCollision(firePosition.gameObject);
             Debug.Log($"[FIRE CANNON] Added CannonBullet component and set target!");
         }
+        
+        // Update last fire time for cooldown
+        lastCannonFireTime = Time.time;
+        if (showDebug) Debug.Log($"[FIRE CANNON] Cannon {cannonID} fired! Cooldown started ({cannonFireCooldown}s)");
     }
     
     /// <summary>
@@ -618,5 +666,23 @@ public class CannonFireInputHandler : MonoBehaviour
             }
         }
         return null;
+    }
+    
+    /// <summary>
+    /// Sets up the AudioSource component for playing cannon fire sound
+    /// </summary>
+    private void SetupAudio()
+    {
+        // Get or add AudioSource component
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        
+        // Configure AudioSource
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D sound (or 1f for 3D)
+        audioSource.volume = cannonFireSoundVolume;
     }
 }
